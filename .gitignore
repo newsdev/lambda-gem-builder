@@ -1,0 +1,3 @@
+deploy/encrypted-secrets
+bin/*
+deploy.zip
