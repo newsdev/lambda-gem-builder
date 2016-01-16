@@ -12,7 +12,7 @@ var airbrake = null;
 var secrets = null;
 
 kms.decrypt({ CiphertextBlob: fs.readFileSync('/var/task/encrypted-secrets') }, function(err, data) {
-  if (err) return context.fail(err.message);
+  if (err) console.log(err.message);
 
   secrets = JSON.parse(data['Plaintext'].toString());
   if (secrets.airbrake_api_key && secrets.airbrake_api_key.length > 0) {
