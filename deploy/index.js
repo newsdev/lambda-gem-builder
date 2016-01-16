@@ -113,10 +113,14 @@ exports.handler = function(event, context) {
               child_process.exec(command, function(err, stdout, stderr) {
                 if (err) console.log(err);
 
+                // Append a link to what has changed since the last release, if
+                // one exists. Assumes that GitHub's tags API endpoint returns
+                // tags in reverse chronological order, which seems to be the
+                // case but is not promised in the documentation.
                 var diff_link = '';
                 tags = JSON.parse(stdout);
                 tags.forEach(function(t, index) {
-                  if (t.name === tag) {
+                  if (t.name === tag && tags[index + 1]) {
                     diff_link = '\n\nSee what\'s changed: https://github.com/' + owner + '/' + repo + '/compare/' + tags[index + 1].name + '...' + tag;
                   }
                 });

@@ -453,6 +453,13 @@ git push origin --tags
 
 ## Changelog
 
+##### `0.1.1`
+
+January 16, 2016.
+
+* Fixes bug in email sending that could not handle repositories with a single
+  release. [#1](https://github.com/newsdev/lambda-gem-builder/issues/1)
+
 #### `0.1.0`
 
 December 30, 2015. Initial Release.
