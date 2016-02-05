@@ -453,6 +453,14 @@ git push origin --tags
 
 ## Changelog
 
+##### `0.1.2`
+
+Feburary 5, 2016.
+
+* Watches for cases where a new tag does not match the version specified in the
+  gemspec, which is likely a mistake and could cause old code to get
+  overwritten. [#3](https://github.com/newsdev/lambda-gem-builder/issues/3)
+
 ##### `0.1.1`
 
 January 16, 2016.
