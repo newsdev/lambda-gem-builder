@@ -21,6 +21,11 @@ kms.decrypt({ CiphertextBlob: fs.readFileSync('/var/task/encrypted-secrets') }, 
 });
 try { fs.mkdirSync('/tmp/gemserver') } catch (e) {};
 
+function emailsEnabled() {
+  return secrets.from_email && secrets.from_email.length > 0 &&
+         secrets.to_email   && secrets.to_email.length   > 0;
+}
+
 exports.handler = function(event, context) {
   var signature = event.signature,
       message = event.data,
@@ -90,6 +95,33 @@ exports.handler = function(event, context) {
             });
           }
 
+          var build = fs.readFileSync('/tmp/build').toString();
+          var builtVersion = build.match(/Version: ([\d\.]*)/)[1];
+
+          // If the gem's version doesn't match this tag, raise an error without
+          if (tag.replace(/^v/, '') !== builtVersion) {
+            // Finish if not sending confirmation emails
+            if (!emailsEnabled()) {
+              context.fail(event);
+            }
+
+            ses.sendEmail({
+              Destination: { ToAddresses: [secrets.to_email] },
+              Message: {
+                Body: {
+                  Text: { Data: 'An error occurred while building ' + repo + ' at tag ' + tag + ':\n    The tag did not match the version specified in the gemspec, which is "' + builtVersion + '".\n\nPlease verify that the gem version listed at the specified tag is what you expect it to be:\n    https://github.com/' + owner + '/' + repo + '/blob/' + tag + '/' + repo + '.gemspec\n\nIf you need to adjust any files in this tag, you can retrigger a build by committing your changes and then running the following:\n\n    git fetch origin\n    tag_ref=$(git show-ref refs/tags/' + tag + ' | awk \'{print $1}\')\n    git tag -d ' + tag + '\n    git push origin :refs/tags/' + tag + '\n    git tag ' + tag + ' $tag_ref\n    git push origin --tags' }
+                },
+                Subject: { Data: '[' + secrets.s3_bucket + '][' + repo + '] ' + tag + ' build failed' }
+              },
+              Source: secrets.from_email
+            }, function(err, data) {
+              if (err) return context.fail(err.message);
+              context.fail(event);
+            });
+
+            return;
+          }
+
           var keys = fs.readFileSync('/tmp/files').toString().split(/\s+/);
           keys.pop();
 
@@ -103,9 +135,6 @@ exports.handler = function(event, context) {
             }, function(err) {
               if (err) console.log(err);
               if (keys.length > 0) return upload();
-
-              var build = fs.readFileSync('/tmp/build').toString();
-              var version = build.match(/Version: ([\d\.]*)/)[1];
 
               // Get previous tag to construct link to diff
               var tags_url = 'https://api.github.com/repos/' + owner + '/' + repo + '/tags';
@@ -125,9 +154,8 @@ exports.handler = function(event, context) {
                   }
                 });
 
-                // Send confirmation email
-                if (!secrets.from_email || secrets.from_email.length === 0 ||
-                    !secrets.to_email || secrets.to_email.length === 0) {
+                // Finish if not sending confirmation emails
+                if (!emailsEnabled()) {
                   return context.succeed(event);
                 }
 
@@ -135,9 +163,9 @@ exports.handler = function(event, context) {
                   Destination: { ToAddresses: [secrets.to_email] },
                   Message: {
                     Body: {
-                      Text: { Data: 'Test this version of the gem by running:\n    gem install ' + repo + ' -v ' + version + ' --source http://' + secrets.s3_bucket + '\n\nTo add this gem to your Gemfile, add this gemserver as a source:\n    source "http://' + secrets.s3_bucket + '"\n\nOr specify the source as an option for the ' + repo + ' gem:\n    gem "' + repo + '", "' + version + '", source: "http://' + secrets.s3_bucket + '"' + diff_link }
+                      Text: { Data: 'Test this version of the gem by running:\n    gem install ' + repo + ' -v ' + builtVersion + ' --source http://' + secrets.s3_bucket + '\n\nTo add this gem to your Gemfile, add this gemserver as a source:\n    source "http://' + secrets.s3_bucket + '"\n\nOr specify the source as an option for the ' + repo + ' gem:\n    gem "' + repo + '", "' + builtVersion + '", source: "http://' + secrets.s3_bucket + '"' + diff_link }
                     },
-                    Subject: { Data: '[' + repo + '] ' + tag + ' built successfully on ' + secrets.s3_bucket }
+                    Subject: { Data: '[' + secrets.s3_bucket + '][' + repo + '] ' + tag + ' built successfully' }
                   },
                   Source: secrets.from_email
                 }, function(err, data) {
