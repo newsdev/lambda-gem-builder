@@ -1,3 +1,4 @@
 deploy/encrypted-secrets
 bin/*
 deploy.zip
+deploy/node_modules

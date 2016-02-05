@@ -1,5 +1,5 @@
 compile:
-	cd deploy; zip -r ../deploy.zip .
+	cd deploy; npm install; zip -r ../deploy.zip .
 	aws s3 cp deploy.zip s3://$(s3_bucket)/deploy.zip --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
 
 update:
