@@ -96,7 +96,7 @@ exports.handler = function(event, context) {
           }
 
           var build = fs.readFileSync('/tmp/build').toString();
-          var builtVersion = build.match(/Version: ([\d\.]*)/)[1];
+          var builtVersion = build.match(/Version: (.+)$/m)[1];
 
           // If the gem's version doesn't match this tag, raise an error without
           if (tag.replace(/^v/, '') !== builtVersion) {
